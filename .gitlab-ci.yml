@@ -130,7 +130,7 @@ verify:3:
   artifacts:
     paths:
       - out/
-    expire_in: 1 hour
+    expire_in: 3 days
 
 build:2:amd64:
   needs:
@@ -175,3 +175,9 @@ build:3:arm64:
     GIT_STRATEGY: none
   tags:
     - native-aarch64
+
+.containerize:
+  image: jitesoft/apline
+  before_script:
+    - PY_PIP_VERSION=$(wget -qO- https://github.com/pypa/pip/releases | grep -oP '(?<=releases\/tag\/)(.*?)(?=\">)' | awk 'NR==1{print $1}')
+    - PY_VERSION=$(cat version.txt)
