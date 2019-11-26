@@ -126,7 +126,7 @@ verify:3:
   cache:
     paths:
       - ccache/
-    key: node.build.ccache-${BUID_ARCH}-${BUILD_VERSION}
+    key: python.build.ccache-${BUILD_ARCH}-${BUILD_VERSION}
   artifacts:
     paths:
       - out/
