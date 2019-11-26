@@ -101,11 +101,13 @@ verify:3:
   before_script:
     - export CCACHE_DIR="${CI_PROJECT_DIR}/ccache"
     - export EXTRA_CFLAGS="-DTHREAD_STACK_SIZE=0x100000"
-    - apk add --no-cache --virtual .build-deps bzip2-dev coreutils dpkg-dev dpkg expat-dev findutils gcc \
-      libc-dev libffi-dev libnsl-dev libtirpc-dev linux-headers \
-      make ncurses-dev openssl-dev pax-utils readline-dev sqlite-dev \
-      tcl-dev tk tk-dev util-linux-dev xz-dev zlib-dev \
-      tar xz ccache
+    - |
+      apk add --no-cache --virtual .build-deps \
+        bzip2-dev coreutils dpkg-dev dpkg expat-dev findutils gcc \
+        libc-dev libffi-dev libnsl-dev libtirpc-dev linux-headers \
+        make ncurses-dev openssl-dev pax-utils readline-dev sqlite-dev \
+        tcl-dev tk tk-dev util-linux-dev xz-dev zlib-dev \
+        tar xz ccache
     - export PATH="/usr/lib/ccache/bin:$PATH"
     - if [ ! -d "ccache" ]; then mkdir ccache; fi
   script:
@@ -113,14 +115,7 @@ verify:3:
     - tar -xJf python.tar.xz -C src/ --strip-components=1
     - rm -rf python.tar.xz
     - cd src
-    - ./configure --build=${BUILD_ARCH}-linux-musl \
-      --prefix=/usr/local \
-      --enable-loadable-sqlite-extensions \
-      --enable-optimizations \
-      --enable-shared \
-      --with-system-expat \
-      --with-system-ffi \
-      --without-ensurepip
+    - ./configure --build=${BUILD_ARCH}-linux-musl --prefix=/usr/local --enable-loadable-sqlite-extensions --enable-optimizations --enable-shared --with-system-expat --with-system-ffi --without-ensurepip
     - make -j4
     - make install
     - ccache -s
