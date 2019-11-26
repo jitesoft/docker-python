@@ -19,7 +19,7 @@ RUN --mount=type=bind,source=./out,target=/tmp/py-bin \
     apk add --no-cache tar curl ca-certificates \
  && ARCH=$(cat /etc/apk/arch) && echo $ARCH \
  && tar -xzhf /tmp/py-bin/python-${ARCH}.tar.gz -C /usr/local \
-&& find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec scanelf --needed --nobanner --format '%n#p' '{}' ';' \
+ && find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec scanelf --needed --nobanner --format '%n#p' '{}' ';' \
     | tr ',' '\n' \
     | sort -u \
     | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \

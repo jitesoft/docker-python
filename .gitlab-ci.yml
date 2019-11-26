@@ -120,6 +120,8 @@ verify:3:
     - ./configure --build=${BUILD_ARCH}-linux-musl --prefix=/usr/local --enable-loadable-sqlite-extensions --enable-optimizations --enable-shared --with-system-expat --with-system-ffi --without-ensurepip
     - make -j4
     - make install
+    - find /usr/local -type d \( -name test -o -name tests -o -name idle_test \) -exec rm -rf '{}' + \
+    - find /usr/local -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete \
     - ccache -s
     - cd ..
     - $(cd /usr/local && tar -czf /tmp/python.tar.gz *)
@@ -181,7 +183,7 @@ build:3:arm64:
 .containerize:
   stage: containerize
   image: registry.gitlab.com/jitesoft/dockerfiles/misc:latest
-  before_script:
+  script:
     - PY_PIP_VERSION=$(wget -qO- https://github.com/pypa/pip/releases | grep -oP '(?<=releases\/tag\/)(.*?)(?=\">)' | awk 'NR==1{print $1}')
     - PY_VERSION=$(cat version.txt)
     - docker buildx build --platforms linux/amd64,linux/arm64 --push -t ${CI_REGISTRY_IMAGE}:${PY_VERSION} -t ${CI_REGISTRY_IMAGE}:${PY_VERSION:0:1} --build-arg PYTHON_VERSION=${PY_VERSION} --build-arg PY_PIP_VERSION=${PY_PIP_VERSION} .
@@ -204,7 +206,7 @@ containerize:3:
 scan:2:
   needs:
     - containerize:2
-  extends: .scan
+  extends: .container_scanning
   variables:
     SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:2"
     GIT_STRATEGY: none
@@ -212,7 +214,7 @@ scan:2:
 scan:3:
   needs:
     - containerize:3
-  extends: .scan
+  extends: .container_scanning
   variables:
     SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:3"
     GIT_STRATEGY: none
