@@ -1,0 +1,182 @@
+stages:
+  - download
+  - verify
+  - build
+#  - containerize
+#  - deploy
+#  - scan
+
+.download:
+  stage: download
+  image: registry.gitlab.com/jitesoft/dockerfiles/alpine:latest
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - apk add --no-cache wget grep
+
+download:2:
+  extends: .download
+  script:
+    - wget -qO- https://www.python.org/downloads/source/ | grep -oP "(?<=Latest Python 2 Release - Python )(([0-9]{0,3}(\.?)){3})" > python2.txt
+    - wget "https://www.python.org/ftp/python/$(cat python2.txt)/Python-${cat python2.txt}.tar.xz" -O python2.tar.xz
+    - wget "https://www.python.org/ftp/python/$(cat python2.txt)/Python-${cat python2.txt}.tar.xz.asc" .O python2.tar.xz.asc
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - python2.*
+
+download:3:
+  extends: .download
+  script:
+    - wget -qO- https://www.python.org/downloads/source/ | grep -oP "(?<=Latest Python 3 Release - Python )(([0-9]{0,3}(\.?)){3})" > python3.txt
+    - wget "https://www.python.org/ftp/python/$(cat python3.txt)/Python-${cat python3.txt}.tar.xz" -O python3.tar.xz
+    - wget "https://www.python.org/ftp/python/$(cat python3.txt)/Python-${cat python3.txt}.tar.xz.asc" .O python3.tar.xz.asc
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - python3.*
+
+download:pgp:
+  stage: download
+  image: registry.gitlab.com/jitesoft/dockerfiles/alpine:latest
+  before_script:
+    - apk add --no-cache gnupg linux-headers
+  script:
+    - |
+      if [ -f keys.out ]; then
+        gpg --import keys.out
+      fi
+    - |
+      for key in `cat gpg.txt`; do
+        gpg --list-keys ${key} || (gpg --keyserver pgp.mit.edu --recv-keys "$key" || gpg --keyserver keyserver.pgp.com --recv-keys "$key" || gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key")
+      done
+    - gpg --export > keys.out
+  tags:
+    - jitesoft
+  cache:
+    key: python.gpg.keyring
+    paths:
+      - keys.out
+  artifacts:
+    paths:
+      - keys.out
+    expire_in: 1 day
+
+.verify:
+  stage: verify
+  before_script:
+    - apk add --no-cache curl grep gnupg
+    - gpg --import keys.out
+  script:
+    - gpg --verify "python${MAJOR}.tar.xz.asc" "python${MAJOR}.tar.xz"
+    - mv "python${MAJOR}.tar.xz" python.tar.xz
+    - mv "python${MAJOR}.txt" version.txt
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - python.tar.xz
+      - version.txt
+
+verify:2:
+  needs:
+    - download:2
+    - download:pgp
+  extends: .verify
+  variables:
+    MAJOR: 2
+    GIT_STRATEGY: none
+
+verify:3:
+  needs:
+   - download:3
+   - download:pgp
+  extends: .verify
+  variables:
+    MAJOR: 3
+    GIT_STRATEGY: none
+
+.build:
+  stage: build
+  image: registry.gitlab.com/jitesoft/dockerfiles/alpine:latest
+  before_script:
+    - export CCACHE_DIR="${CI_PROJECT_DIR}/ccache"
+    - export EXTRA_CFLAGS="-DTHREAD_STACK_SIZE=0x100000"
+    - apk add --no-cache --virtual .build-deps bzip2-dev coreutils dpkg-dev dpkg expat-dev findutils gcc \
+      libc-dev libffi-dev libnsl-dev libtirpc-dev linux-headers \
+      make ncurses-dev openssl-dev pax-utils readline-dev sqlite-dev \
+      tcl-dev tk tk-dev util-linux-dev xz-dev zlib-dev \
+      tar xz ccache
+    - export PATH="/usr/lib/ccache/bin:$PATH"
+    - if [ ! -d "ccache" ]; then mkdir ccache; fi
+  script:
+    - mkdir src/ && mkdir out/
+    - tar -xJf python.tar.xz -C src/ --strip-components=1
+    - rm -rf python.tar.xz
+    - cd src
+    - ./configure --build=${BUILD_ARCH}-linux-musl \
+      --prefix=/usr/local \
+      --enable-loadable-sqlite-extensions \
+      --enable-optimizations \
+      --enable-shared \
+      --with-system-expat \
+      --with-system-ffi \
+      --without-ensurepip
+    - make -j4
+    - make install
+    - ccache -s
+    - cd ..
+    - $(cd /usr/local && tar -czf /tmp/python.tar.gz *)
+    - mv version.txt out/version.txt
+    - mv /tmp/python.tar.gz out/python-${BUILD_ARCH}.tar.gz
+  cache:
+    paths:
+      - ccache/
+    key: node.build.ccache-${BUID_ARCH}-${BUILD_VERSION}
+  artifacts:
+    paths:
+      - out/
+    expire_in: 1 hour
+
+build:2:amd64:
+  needs:
+    - verify:2
+  extends: .build
+  variables:
+    BUILD_ARCH: x86_64
+    BUILD_VERSION: 2
+    GIT_STRATEGY: none
+  tags:
+    - native-amd64
+
+build:3:amd64:
+  needs:
+    - verify:3
+  extends: .build
+  variables:
+    BUILD_ARCH: x86_64
+    BUILD_VERSION: 3
+    GIT_STRATEGY: none
+  tags:
+    - native-amd64
+
+build:2:arm64:
+  needs:
+    - verify:2
+  extends: .build
+  variables:
+    BUILD_ARCH: aarch64
+    BUILD_VERSION: 2
+    GIT_STRATEGY: none
+  tags:
+    - native-aarch64
+
+build:3:arm64:
+  needs:
+    - verify:3
+  extends: .build
+  variables:
+    BUILD_ARCH: aarch64
+    BUILD_VERSION: 3
+    GIT_STRATEGY: none
+  tags:
+    - native-aarch64
