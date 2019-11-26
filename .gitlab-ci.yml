@@ -185,7 +185,7 @@ build:3:arm64:
   image: registry.gitlab.com/jitesoft/dockerfiles/misc:latest
   script:
     - PY_PIP_VERSION=$(wget -qO- https://github.com/pypa/pip/releases | grep -oP '(?<=releases\/tag\/)(.*?)(?=\">)' | awk 'NR==1{print $1}')
-    - PY_VERSION=$(cat version.txt)
+    - PY_VERSION=$(cat out/version.txt)
     - docker buildx build --platforms linux/amd64,linux/arm64 --progress plain --push -t ${CI_REGISTRY_IMAGE}:${PY_VERSION} -t ${CI_REGISTRY_IMAGE}:${PY_VERSION:0:1} --build-arg PYTHON_VERSION=${PY_VERSION} --build-arg PY_PIP_VERSION=${PY_PIP_VERSION} .
   tags:
     - protected
