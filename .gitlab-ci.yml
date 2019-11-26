@@ -1,10 +1,12 @@
+include:
+  - https://gitlab.com/jitesoft/gitlab-ci-lib/raw/master/container_scan-v2.yml
+
 stages:
   - download
   - verify
   - build
-#  - containerize
-#  - deploy
-#  - scan
+  - containerize
+  - scan
 
 .download:
   stage: download
@@ -182,7 +184,7 @@ build:3:arm64:
   before_script:
     - PY_PIP_VERSION=$(wget -qO- https://github.com/pypa/pip/releases | grep -oP '(?<=releases\/tag\/)(.*?)(?=\">)' | awk 'NR==1{print $1}')
     - PY_VERSION=$(cat version.txt)
-    - docker buildx build --platforms linux/amd64,linux/arm64 --push -t ${CI_REGISTRY_IMAGE}:${PY_VERSION} --build-arg PYTHON_VERSION=${PY_VERSION} --build-arg PY_PIP_VERSION=${PY_PIP_VERSION} .
+    - docker buildx build --platforms linux/amd64,linux/arm64 --push -t ${CI_REGISTRY_IMAGE}:${PY_VERSION} -t ${CI_REGISTRY_IMAGE}:${PY_VERSION:0:1} --build-arg PYTHON_VERSION=${PY_VERSION} --build-arg PY_PIP_VERSION=${PY_PIP_VERSION} .
   tags:
     - protected
     - buildx
@@ -198,3 +200,19 @@ containerize:3:
   needs:
     - build:3:arm64
     - build:3:amd64
+
+scan:2:
+  needs:
+    - containerize:2
+  extends: .scan
+  variables:
+    SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:2"
+    GIT_STRATEGY: none
+
+scan:3:
+  needs:
+    - containerize:3
+  extends: .scan
+  variables:
+    SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:3"
+    GIT_STRATEGY: none
