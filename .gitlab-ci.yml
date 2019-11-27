@@ -184,21 +184,26 @@ build:3:arm64:
   stage: containerize
   image: registry.gitlab.com/jitesoft/dockerfiles/misc:latest
   script:
-    - PY_PIP_VERSION=$(wget -qO- https://github.com/pypa/pip/releases | grep -oP '(?<=releases\/tag\/)(.*?)(?=\">)' | awk 'NR==1{print $1}')
     - PY_VERSION=$(cat out/version.txt)
-    - docker buildx build --platform linux/amd64,linux/arm64 --progress plain --push -t ${CI_REGISTRY_IMAGE}:${PY_VERSION} -t ${CI_REGISTRY_IMAGE}:${PY_VERSION:0:1} --build-arg PYTHON_VERSION=${PY_VERSION} --build-arg PY_PIP_VERSION=${PY_PIP_VERSION} .
+    - TAG_LIST=$(helper taglist "${CI_REGISTRY_IMAGE},jitesoft/python", "${TAGS}$(PY_VERSION | cut -d'.' -f1,2),$(PY_VERSION | cut -d'.' -f1),${PY_VERSION}")
+    - PY_PIP_VERSION=$(wget -qO- https://github.com/pypa/pip/releases | grep -oP '(?<=releases\/tag\/)(.*?)(?=\">)' | awk 'NR==1{print $1}')
+    - docker buildx build --platform linux/amd64,linux/arm64 --progress plain --push ${TAG_LIST} --build-arg PYTHON_VERSION=${PY_VERSION} --build-arg PY_PIP_VERSION=${PY_PIP_VERSION} .
   tags:
     - protected
     - buildx
 
 containerize:2:
   extends: .containerize
+  variables:
+    TAGS: ""
   needs:
     - build:2:arm64
     - build:2:amd64
 
 containerize:3:
   extends: .containerize
+  variables:
+    TAGS: "latest,"
   needs:
     - build:3:arm64
     - build:3:amd64
@@ -210,6 +215,9 @@ scan:2:
   variables:
     SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:2"
     GIT_STRATEGY: none
+  tags:
+    - buildx
+    - protected
 
 scan:3:
   needs:
@@ -218,3 +226,6 @@ scan:3:
   variables:
     SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:3"
     GIT_STRATEGY: none
+  tags:
+    - buildx
+    - protected
