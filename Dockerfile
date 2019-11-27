@@ -24,10 +24,12 @@ RUN --mount=type=bind,source=./out,target=/tmp/py-bin \
     | sort -u \
     | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
     | xargs -rt apk add --no-cache --virtual .runtime-deps \
- && ln -s /usr/local/bin/idle${PYTHON_VERSION:0:1} /usr/local/bin/idle \
- && ln -s /usr/local/bin/pydoc${PYTHON_VERSION:0:1} /usr/local/bin/pydoc \
- && ln -s /usr/local/bin/python${PYTHON_VERSION:0:1} /usr/local/bin/python \
- && ln -s /usr/local/bin/idle${PYTHON_VERSION:0:1} /usr/local/bin/python-config \
+ && if [ "${PYTHON_VERSION:0:1}" -ge 3 ]; then \
+      ln -s /usr/local/bin/idle${PYTHON_VERSION:0:1} /usr/local/bin/idle; \
+      ln -s /usr/local/bin/pydoc${PYTHON_VERSION:0:1} /usr/local/bin/pydoc; \
+      ln -s /usr/local/bin/python${PYTHON_VERSION:0:1} /usr/local/bin/python; \
+      ln -s /usr/local/bin/idle${PYTHON_VERSION:0:1} /usr/local/bin/python-config; \
+    fi \
  && wget -qO- https://bootstrap.pypa.io/get-pip.py | python - pip==${PY_PIP_VERSION} --disable-pip-version-check --no-cache-dir \
  && find /usr/local -type d \( -name test -o -name tests -o -name idle_test \) -exec rm -rf '{}' + \
  && find /usr/local -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete \
