@@ -107,9 +107,9 @@ verify:3:
       apk add --no-cache --virtual .build-deps \
         bzip2-dev coreutils dpkg-dev dpkg expat-dev findutils gcc \
         libc-dev libffi-dev libnsl-dev libtirpc-dev linux-headers \
-        make ncurses-dev openssl-dev pax-utils readline-dev sqlite-dev \
-        tcl-dev tk tk-dev util-linux-dev xz-dev zlib-dev \
-        tar xz ccache
+        make ncurses-dev openssl openssl-dev pax-utils readline-dev \
+        tcl-dev tk tk-dev util-linux-dev xz-dev zlib-dev ca-certificates \
+        tar xz ccache sqlite-dev
     - export PATH="/usr/lib/ccache/bin:$PATH"
     - if [ ! -d "ccache" ]; then mkdir ccache; fi
   script:
