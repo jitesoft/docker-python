@@ -1,5 +1,5 @@
 include:
-  - https://gitlab.com/jitesoft/gitlab-ci-lib/raw/master/container_scan-v2.yml
+  - https://gitlab.com/jitesoft/gitlab-ci-lib/raw/master/Scan/trivy.yml
 
 stages:
   - download
@@ -15,17 +15,6 @@ stages:
     GIT_STRATEGY: none
   before_script:
     - apk add --no-cache wget grep
-
-download:2:
-  extends: .download
-  script:
-    - wget -qO- https://www.python.org/downloads/source/ | grep -oP "(?<=Latest Python 2 Release - Python )(([0-9]{0,3}(\.?)){3})" | awk 'NR==1{print $1}' > python2.txt
-    - wget "https://www.python.org/ftp/python/$(cat python2.txt)/Python-$(cat python2.txt).tar.xz" -O python2.tar.xz
-    - wget "https://www.python.org/ftp/python/$(cat python2.txt)/Python-$(cat python2.txt).tar.xz.asc" -O python2.tar.xz.asc
-  artifacts:
-    expire_in: 1 hour
-    paths:
-      - python2.*
 
 download:3:
   extends: .download
@@ -79,15 +68,6 @@ download:pgp:
       - python.tar.xz
       - version.txt
 
-verify:2:
-  needs:
-    - download:2
-    - download:pgp
-  extends: .verify
-  variables:
-    MAJOR: 2
-    GIT_STRATEGY: none
-
 verify:3:
   needs:
    - download:3
@@ -109,9 +89,11 @@ verify:3:
         libc-dev libffi-dev libnsl-dev libtirpc-dev linux-headers \
         make ncurses-dev openssl openssl-dev pax-utils readline-dev \
         tcl-dev tk tk-dev util-linux-dev xz-dev zlib-dev ca-certificates \
-        tar xz ccache sqlite-dev
+        tar xz ccache sqlite-dev g++
     - export PATH="/usr/lib/ccache/bin:$PATH"
     - if [ ! -d "ccache" ]; then mkdir ccache; fi
+    - export PATH="/usr/lib/ccache/bin:$PATH"
+    - ccache -s
   script:
     - mkdir src/ && mkdir out/
     - tar -xJf python.tar.xz -C src/ --strip-components=1
@@ -136,17 +118,6 @@ verify:3:
       - out/
     expire_in: 3 days
 
-build:2:amd64:
-  needs:
-    - verify:2
-  extends: .build
-  variables:
-    BUILD_ARCH: x86_64
-    BUILD_VERSION: 2
-    GIT_STRATEGY: none
-  tags:
-    - native-amd64
-
 build:3:amd64:
   needs:
     - verify:3
@@ -157,17 +128,6 @@ build:3:amd64:
     GIT_STRATEGY: none
   tags:
     - native-amd64
-
-build:2:arm64:
-  needs:
-    - verify:2
-  extends: .build
-  variables:
-    BUILD_ARCH: aarch64
-    BUILD_VERSION: 2
-    GIT_STRATEGY: none
-  tags:
-    - native-aarch64
 
 build:3:arm64:
   needs:
@@ -192,14 +152,6 @@ build:3:arm64:
     - protected
     - buildx
 
-containerize:2:
-  extends: .containerize
-  variables:
-    TAGS: ""
-  needs:
-    - build:2:arm64
-    - build:2:amd64
-
 containerize:3:
   extends: .containerize
   variables:
@@ -207,17 +159,6 @@ containerize:3:
   needs:
     - build:3:arm64
     - build:3:amd64
-
-scan:2:
-  needs:
-    - containerize:2
-  extends: .container_scanning
-  variables:
-    SCANNING_IMAGE_NAME: "${CI_REGISTRY_IMAGE}:2"
-    GIT_STRATEGY: none
-  tags:
-    - buildx
-    - protected
 
 scan:3:
   needs:
