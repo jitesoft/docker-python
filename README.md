@@ -7,20 +7,15 @@ All images are available for AMD64 and ARM64 on Docker Hub and GitLab.
 
 ## Tags
 
-### Docker Hub
+Images can be found at:
 
-* `3`, `3.8`, `3.8.x`, `latest`
-* `2`, `2.7`, `2.7.x` 
+* [Docker hub](https://hub.docker.com/r/jitesoft/python): `jitesoft/python`  
+* [GitLab](https://gitlab.com/jitesoft/dockerfiles/python): `registry.gitlab.com/jitesoft/dockerfiles/python`
+* [GitHub](https://github.com/orgs/jitesoft/packages/container/package/python): `ghcr.io/jitesoft/python`
 
-### GitLab
+## Dockerfile
 
-* `registry.gitlab.com/jitesoft/dockerfiles/python`
-    * `3`, `3.8`, `3.8.x`, `latest`
-    * `2`, `2.7`, `2.7.x` 
-
-## Docker files
-
-Docker files can be found at  [GitLab](https://gitlab.com/jitesoft/dockerfiles/python) or [GitHub](https://github.com/jitesoft/docker-python)
+Dockerfile can be found at  [GitLab](https://gitlab.com/jitesoft/dockerfiles/python) or [GitHub](https://github.com/jitesoft/docker-python)
 
 ### Image labels
 
